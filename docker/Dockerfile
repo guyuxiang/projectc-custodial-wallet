@@ -17,7 +17,7 @@ RUN make src.build
 RUN mv build/pkg/cmd/projectc-custodial-wallet/projectc-custodial-wallet /go/bin
 
 # Production stage
-FROM alpine:3.9
+FROM docker.m.daocloud.io/golang:1.24
 WORKDIR /go/bin
 
 LABEL maintainer="guyuxiang <guyuxiang@qq.com>"
