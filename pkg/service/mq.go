@@ -1,0 +1,247 @@
+package service
+
+import (
+	"context"
+	"encoding/json"
+	"strings"
+	"time"
+
+	"github.com/guyuxiang/projectc-wallet/pkg/log"
+	"github.com/guyuxiang/projectc-wallet/pkg/models"
+	"github.com/guyuxiang/projectc-wallet/pkg/rabbitmq"
+	"github.com/guyuxiang/projectc-wallet/pkg/store"
+)
+
+type txCallbackMessage struct {
+	Tx struct {
+		Code        string `json:"code"`
+		NetworkCode string `json:"networkCode"`
+		BlockNumber uint64 `json:"blockNumber"`
+		Timestamp   int64  `json:"timestamp"`
+		Status      string `json:"status"`
+		From        string `json:"from"`
+		To          string `json:"to"`
+		Amount      string `json:"amount"`
+		Fee         string `json:"fee"`
+	} `json:"tx"`
+	TxEvents []struct {
+		Type string                 `json:"type"`
+		Data map[string]interface{} `json:"data"`
+	} `json:"txEvents"`
+}
+
+type txRollbackMessage struct {
+	TxCode string `json:"txCode"`
+}
+
+func (s *walletService) StartMQConsumer() error {
+	var err error
+	s.mqOnce.Do(func() {
+		var deliveries <-chan rabbitmq.Delivery
+		deliveries, err = rabbitmq.ConsumeWalletCallbacks("projectc-wallet-consumer")
+		if err != nil {
+			return
+		}
+		go func() {
+			for delivery := range deliveries {
+				if handleErr := s.handleMQDelivery(delivery); handleErr != nil {
+					log.Warningf("handle mq delivery failed type=%s err=%v", delivery.Type, handleErr)
+					_ = delivery.Nack(false, true)
+					continue
+				}
+				_ = delivery.Ack(false)
+			}
+		}()
+	})
+	return err
+}
+
+func (s *walletService) handleMQDelivery(delivery rabbitmq.Delivery) error {
+	switch delivery.Type {
+	case "rollback":
+		var msg txRollbackMessage
+		if err := json.Unmarshal(delivery.Body, &msg); err != nil {
+			return err
+		}
+		return s.handleRollback(msg)
+	default:
+		var msg txCallbackMessage
+		if err := json.Unmarshal(delivery.Body, &msg); err != nil {
+			return err
+		}
+		return s.handleTxCallback(msg)
+	}
+}
+
+func (s *walletService) handleTxCallback(msg txCallbackMessage) error {
+	if msg.Tx.Code == "" || strings.ToLower(msg.Tx.NetworkCode) != s.networkCode() {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	rows, err := s.store.ListTransactionsByTxHash(ctx, msg.Tx.Code)
+	if err != nil {
+		return err
+	}
+	for i := range rows {
+		tx := rows[i]
+		if tx.Direction != models.DirectionOut {
+			continue
+		}
+		nextStatus := models.StatusSuccess
+		failReason := ""
+		if strings.EqualFold(msg.Tx.Status, "FAILED") {
+			nextStatus = models.StatusFail
+			failReason = "on-chain transaction failed"
+		}
+		if tx.Status == nextStatus && tx.Fee == msg.Tx.Fee && tx.TxTime == msg.Tx.Timestamp {
+			continue
+		}
+		tx.Status = nextStatus
+		tx.FailReason = failReason
+		tx.Fee = msg.Tx.Fee
+		tx.TxTime = msg.Tx.Timestamp
+		if err := s.store.UpdateTransaction(ctx, &tx); err != nil {
+			return err
+		}
+		go s.notifyTransferOutResult(context.Background(), &tx)
+	}
+
+	if err := s.handleIncomingNative(ctx, msg); err != nil {
+		return err
+	}
+	return s.handleIncomingToken(ctx, msg)
+}
+
+func (s *walletService) handleIncomingNative(ctx context.Context, msg txCallbackMessage) error {
+	if !strings.EqualFold(msg.Tx.Status, "SUCCESS") {
+		return nil
+	}
+	wallet, err := s.store.GetWalletByAddress(ctx, s.networkCode(), msg.Tx.To)
+	if err != nil {
+		if store.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	if msg.Tx.Amount == "" || msg.Tx.Amount == "0" {
+		return nil
+	}
+	return s.upsertIncomingTransaction(ctx, wallet, msg.Tx.Code, models.TokenNative, s.nativeTokenSymbol(), msg.Tx.Amount, msg.Tx.From, msg.Tx.To, msg.Tx.Fee, msg.Tx.Timestamp, models.StatusSuccess)
+}
+
+func (s *walletService) handleIncomingToken(ctx context.Context, msg txCallbackMessage) error {
+	for _, event := range msg.TxEvents {
+		if event.Type != "RT_TRANSFER" {
+			continue
+		}
+		toAddress, _ := event.Data["to"].(string)
+		if toAddress == "" {
+			continue
+		}
+		wallet, err := s.store.GetWalletByAddress(ctx, s.networkCode(), toAddress)
+		if err != nil {
+			if store.IsNotFound(err) {
+				continue
+			}
+			return err
+		}
+		tokenCode, _ := event.Data["tokenCode"].(string)
+		token, err := s.getConnectorToken(ctx, tokenCode)
+		if err != nil {
+			return err
+		}
+		amount := formatEventAmount(event.Data["amount"])
+		fromAddress, _ := event.Data["from"].(string)
+		if err := s.upsertIncomingTransaction(ctx, wallet, msg.Tx.Code, token.MintAddress, token.Code, amount, fromAddress, toAddress, msg.Tx.Fee, msg.Tx.Timestamp, models.StatusSuccess); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *walletService) upsertIncomingTransaction(ctx context.Context, wallet *models.WalletEntity, txHash string, tokenAddress string, tokenSymbol string, amount string, fromAddress string, toAddress string, fee string, txTime int64, status string) error {
+	existing, err := s.store.FindIncomingTransaction(ctx, wallet.WalletNo, txHash, tokenAddress)
+	if err == nil {
+		if existing.Status == status && existing.Amount == amount {
+			return nil
+		}
+		existing.Status = status
+		existing.Amount = amount
+		existing.Fee = fee
+		existing.TxTime = txTime
+		existing.FromAddress = fromAddress
+		existing.ToAddress = toAddress
+		if err := s.store.UpdateTransaction(ctx, existing); err != nil {
+			return err
+		}
+		go s.notifyDeposit(context.Background(), existing)
+		return nil
+	}
+	if err != nil && !store.IsNotFound(err) {
+		return err
+	}
+
+	tx := &models.TransactionEntity{
+		TransactionNo: generateID("T"),
+		Direction:     models.DirectionIn,
+		WalletNo:      wallet.WalletNo,
+		Network:       wallet.Network,
+		FromAddress:   fromAddress,
+		ToAddress:     toAddress,
+		TokenAddress:  tokenAddress,
+		TokenSymbol:   tokenSymbol,
+		Amount:        amount,
+		Fee:           fee,
+		TxHash:        txHash,
+		Status:        status,
+		TxTime:        txTime,
+	}
+	if err := s.store.CreateTransaction(ctx, tx); err != nil {
+		return err
+	}
+	go s.notifyDeposit(context.Background(), tx)
+	return nil
+}
+
+func (s *walletService) handleRollback(msg txRollbackMessage) error {
+	if msg.TxCode == "" {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	rows, err := s.store.ListTransactionsByTxHash(ctx, msg.TxCode)
+	if err != nil {
+		return err
+	}
+	for i := range rows {
+		tx := rows[i]
+		if tx.Status == models.StatusFail {
+			continue
+		}
+		tx.Status = models.StatusFail
+		tx.FailReason = "transaction reverted"
+		if err := s.store.UpdateTransaction(ctx, &tx); err != nil {
+			return err
+		}
+		if tx.Direction == models.DirectionOut {
+			go s.notifyTransferOutResult(context.Background(), &tx)
+		} else {
+			go s.notifyDeposit(context.Background(), &tx)
+		}
+	}
+	return nil
+}
+
+func formatEventAmount(v interface{}) string {
+	switch value := v.(type) {
+	case float64:
+		return formatFloat(value)
+	case string:
+		return normalizeAmountString(value)
+	default:
+		return "0.000000"
+	}
+}

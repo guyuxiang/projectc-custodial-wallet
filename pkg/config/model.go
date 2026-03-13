@@ -1,12 +1,17 @@
 package config
 
 type Config struct {
-	Server   *Server   `yaml:"server"`
-	Auth     *Auth     `yaml:"auth"`
-	Gin      *Gin      `yaml:"gin"`
-	Log      *Log      `yaml:"log"`
-	MySQL    *MySQL    `yaml:"mysql"`
-	RabbitMQ *RabbitMQ `yaml:"rabbitmq"`
+	Server    *Server    `yaml:"server"`
+	Auth      *Auth      `yaml:"auth"`
+	Gin       *Gin       `yaml:"gin"`
+	Log       *Log       `yaml:"log"`
+	MySQL     *MySQL     `yaml:"mysql"`
+	RabbitMQ  *RabbitMQ  `yaml:"rabbitmq"`
+	Signature *Signature `yaml:"signature"`
+	KMS       *KMS       `yaml:"kms"`
+	Connector *Connector `yaml:"connector"`
+	Callback  *Callback  `yaml:"callback"`
+	Solana    *Solana    `yaml:"solana"`
 }
 
 type Server struct {
@@ -35,9 +40,42 @@ type MySQL struct {
 }
 
 type RabbitMQ struct {
-	URL          string `yaml:"url"`
-	Exchange     string `yaml:"exchange"`
-	ExchangeType string `yaml:"exchangeType"`
-	Queue        string `yaml:"queue"`
-	RoutingKey   string `yaml:"routingKey"`
+	URL            string `yaml:"url"`
+	VHost          string `yaml:"vhost"`
+	Exchange       string `yaml:"exchange"`
+	CancelExchange string `yaml:"cancelExchange"`
+	ExchangeType   string `yaml:"exchangeType"`
+	Queue          string `yaml:"queue"`
+	RoutingKey     string `yaml:"routingKey"`
+}
+
+type Signature struct {
+	AppID         string `yaml:"appId"`
+	AppSecret     string `yaml:"appSecret"`
+	MaxSkewMillis int64  `yaml:"maxSkewMillis"`
+}
+
+type KMS struct {
+	BaseURL  string `yaml:"baseUrl"`
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+}
+
+type Connector struct {
+	BaseURL           string `yaml:"baseUrl"`
+	Username          string `yaml:"username"`
+	Password          string `yaml:"password"`
+	NetworkCode       string `yaml:"networkCode"`
+	NativeTokenSymbol string `yaml:"nativeTokenSymbol"`
+}
+
+type Callback struct {
+	DepositURL     string `yaml:"depositUrl"`
+	TransferOutURL string `yaml:"transferOutUrl"`
+	TimeoutSeconds int    `yaml:"timeoutSeconds"`
+}
+
+type Solana struct {
+	RPCEndpoint      string `yaml:"rpcEndpoint"`
+	ComputeUnitPrice uint64 `yaml:"computeUnitPrice"`
 }

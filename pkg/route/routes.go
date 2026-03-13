@@ -7,7 +7,6 @@ import (
 	_ "github.com/guyuxiang/projectc-wallet/docs"
 	"github.com/guyuxiang/projectc-wallet/pkg/controller"
 	"github.com/guyuxiang/projectc-wallet/pkg/log"
-	"github.com/guyuxiang/projectc-wallet/pkg/middleware"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"github.com/swaggo/gin-swagger/swaggerFiles"
 )
@@ -41,16 +40,19 @@ func InstallRoutes(r *gin.Engine) {
 	})
 
 	rootGroup := r.Group("/api/v1")
-	// AuthRequired middleware that provide basic auth
-	rootGroup.Use(middleware.BasicAuthMiddleware())
+	// rootGroup.Use(middleware.RequestSignatureMiddleware())
 
 	{
-		// a ping api to test basic auth
 		rootGroup.GET("/ping", controller.Ping)
 	}
 
 	{
-		toDoController := controller.NewToDoController()
-		rootGroup.GET("/todo/get", toDoController.GetToDo)
+		walletController := controller.NewWalletController()
+		rootGroup.POST("/wallet/create", walletController.CreateWallet)
+		rootGroup.POST("/wallet/info/query", walletController.QueryWalletInfo)
+		rootGroup.POST("/wallet/transfer/out/query", walletController.QueryTransferOutAssets)
+		rootGroup.POST("/wallet/transfer/out", walletController.TransferOut)
+		rootGroup.POST("/wallet/transaction/query", walletController.QueryTransaction)
+		rootGroup.POST("/wallet/transaction/history/query", walletController.QueryHistory)
 	}
 }

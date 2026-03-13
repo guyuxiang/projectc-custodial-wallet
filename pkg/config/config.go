@@ -43,6 +43,10 @@ func init() {
 		switch opt.optDefaultValue.(type) {
 		case int:
 			pflag.Int(opt.optName, opt.optDefaultValue.(int), opt.optUsage)
+		case int64:
+			pflag.Int64(opt.optName, opt.optDefaultValue.(int64), opt.optUsage)
+		case uint64:
+			pflag.Uint64(opt.optName, opt.optDefaultValue.(uint64), opt.optUsage)
 		case string:
 			pflag.String(opt.optName, opt.optDefaultValue.(string), opt.optUsage)
 		case bool:

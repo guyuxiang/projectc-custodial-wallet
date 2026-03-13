@@ -9,13 +9,15 @@ import (
 	"github.com/guyuxiang/projectc-wallet/pkg/mysql"
 	"github.com/guyuxiang/projectc-wallet/pkg/rabbitmq"
 	"github.com/guyuxiang/projectc-wallet/pkg/route"
+	"github.com/guyuxiang/projectc-wallet/pkg/service"
 	"github.com/guyuxiang/projectc-wallet/pkg/util"
 )
 
 func main() {
 	util.SetupSigusr1Trap()
 
-	if _, err := mysql.Init(config.GetConfig().MySQL); err != nil {
+	db, err := mysql.Init(config.GetConfig().MySQL)
+	if err != nil {
 		log.Fatalf("init mysql failed: %v", err)
 	}
 	defer func() {
@@ -32,6 +34,13 @@ func main() {
 			log.Errorf("close rabbitmq failed: %v", err)
 		}
 	}()
+
+	if err := service.InitApp(config.GetConfig(), db); err != nil {
+		log.Fatalf("init app failed: %v", err)
+	}
+	if err := service.GetApp().Wallet.StartMQConsumer(); err != nil {
+		log.Fatalf("start mq consumer failed: %v", err)
+	}
 
 	r := gin.Default()
 	m := config.GetString(config.FLAG_KEY_GIN_MODE)

@@ -2,6 +2,8 @@ package rabbitmq
 
 import (
 	"errors"
+	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -9,6 +11,8 @@ import (
 	"github.com/guyuxiang/projectc-wallet/pkg/log"
 	"github.com/streadway/amqp"
 )
+
+type Delivery = amqp.Delivery
 
 var (
 	mu                sync.RWMutex
@@ -138,6 +142,18 @@ func Consume(consumer string, autoAck bool) (<-chan amqp.Delivery, func() error,
 	return deliveries, closeFn, nil
 }
 
+func ConsumeWalletCallbacks(consumer string) (<-chan amqp.Delivery, error) {
+	deliveries, closeFn, err := Consume(consumer, false)
+	if err != nil {
+		return nil, err
+	}
+	go func() {
+		<-stopSignal()
+		_ = closeFn()
+	}()
+	return deliveries, nil
+}
+
 func Close() error {
 	mu.Lock()
 	localStopCh := stopCh
@@ -205,9 +221,12 @@ func connect(rabbitCfg *config.RabbitMQ) error {
 }
 
 func declareTopology(ch *amqp.Channel, rabbitCfg *config.RabbitMQ) error {
-	if rabbitCfg.Exchange != "" {
+	for _, exchange := range []string{rabbitCfg.Exchange, rabbitCfg.CancelExchange} {
+		if exchange == "" {
+			continue
+		}
 		if err := ch.ExchangeDeclare(
-			rabbitCfg.Exchange,
+			exchange,
 			rabbitCfg.ExchangeType,
 			true,
 			false,
@@ -234,17 +253,21 @@ func declareTopology(ch *amqp.Channel, rabbitCfg *config.RabbitMQ) error {
 		return err
 	}
 
-	if rabbitCfg.Exchange == "" {
-		return nil
+	for _, exchange := range []string{rabbitCfg.Exchange, rabbitCfg.CancelExchange} {
+		if exchange == "" {
+			continue
+		}
+		if err := ch.QueueBind(
+			rabbitCfg.Queue,
+			rabbitCfg.RoutingKey,
+			exchange,
+			false,
+			nil,
+		); err != nil {
+			return err
+		}
 	}
-
-	return ch.QueueBind(
-		rabbitCfg.Queue,
-		rabbitCfg.RoutingKey,
-		rabbitCfg.Exchange,
-		false,
-		nil,
-	)
+	return nil
 }
 
 func watchClose() {
@@ -295,6 +318,12 @@ func watchClose() {
 	}
 }
 
+func stopSignal() <-chan struct{} {
+	mu.RLock()
+	defer mu.RUnlock()
+	return stopCh
+}
+
 func normalizeConfig(rabbitCfg *config.RabbitMQ) *config.RabbitMQ {
 	normalized := *rabbitCfg
 	if normalized.ExchangeType == "" {
@@ -302,6 +331,16 @@ func normalizeConfig(rabbitCfg *config.RabbitMQ) *config.RabbitMQ {
 	}
 	if normalized.RoutingKey == "" {
 		normalized.RoutingKey = normalized.Queue
+	}
+	if normalized.VHost != "" {
+		if parsed, err := url.Parse(normalized.URL); err == nil {
+			vhost := normalized.VHost
+			if !strings.HasPrefix(vhost, "/") {
+				vhost = "/" + vhost
+			}
+			parsed.Path = vhost
+			normalized.URL = parsed.String()
+		}
 	}
 
 	return &normalized

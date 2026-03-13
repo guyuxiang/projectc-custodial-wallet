@@ -1,0 +1,343 @@
+basePath: /api/v1
+definitions:
+  models.Response:
+    properties:
+      code:
+        type: string
+      data: {}
+      message:
+        type: string
+    type: object
+  models.TransactionHistoryQueryRequest:
+    properties:
+      cursor:
+        type: integer
+      direction:
+        type: string
+      endTime:
+        type: integer
+      pageSize:
+        type: integer
+      startTime:
+        type: integer
+      walletNo:
+        type: string
+    required:
+    - pageSize
+    - walletNo
+    type: object
+  models.TransactionQueryRequest:
+    properties:
+      transactionNo:
+        type: string
+    required:
+    - transactionNo
+    type: object
+  models.TransferOutQueryRequest:
+    properties:
+      walletNo:
+        type: string
+    required:
+    - walletNo
+    type: object
+  models.TransferOutRequest:
+    properties:
+      amount:
+        type: string
+      network:
+        type: string
+      requestNo:
+        type: string
+      toAddress:
+        type: string
+      tokenAddress:
+        type: string
+      walletNo:
+        type: string
+    required:
+    - amount
+    - network
+    - requestNo
+    - toAddress
+    - walletNo
+    type: object
+  models.WalletCreateRequest:
+    type: object
+  models.WalletInfoQueryRequest:
+    properties:
+      walletNo:
+        type: string
+    required:
+    - walletNo
+    type: object
+info:
+  contact:
+    email: guyuxiang@qq.com
+    name: guyuxiang
+    url: https://guyuxiang.github.io
+  description: This is a projectc-wallet.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  title: Swagger projectc-wallet
+  version: 0.1.0
+paths:
+  /todo/get:
+    get:
+      description: Get todo demo response.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: GetToDo
+      tags:
+      - ToDo
+  /wallet/create:
+    post:
+      consumes:
+      - application/json
+      description: Create a centralized wallet and subscribe its Solana address.
+      parameters:
+      - description: Create wallet request
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/models.WalletCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: CreateWallet
+      tags:
+      - Wallet
+  /wallet/info/query:
+    post:
+      consumes:
+      - application/json
+      description: Query wallet token balances.
+      parameters:
+      - description: Wallet info query request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.WalletInfoQueryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: QueryWalletInfo
+      tags:
+      - Wallet
+  /wallet/transaction/history/query:
+    post:
+      consumes:
+      - application/json
+      description: Query wallet transaction history by cursor and time range.
+      parameters:
+      - description: Transaction history query request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.TransactionHistoryQueryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: QueryHistory
+      tags:
+      - Wallet
+  /wallet/transaction/query:
+    post:
+      consumes:
+      - application/json
+      description: Query a single transaction by transactionNo.
+      parameters:
+      - description: Transaction query request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.TransactionQueryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: QueryTransaction
+      tags:
+      - Wallet
+  /wallet/transfer/out:
+    post:
+      consumes:
+      - application/json
+      description: Submit a wallet transfer-out request for native SOL or configured
+        SPL tokens.
+      parameters:
+      - description: Transfer out request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.TransferOutRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: TransferOut
+      tags:
+      - Wallet
+  /wallet/transfer/out/query:
+    post:
+      consumes:
+      - application/json
+      description: Query transferable assets of a wallet, including native token and
+        configured SPL tokens.
+      parameters:
+      - description: Transfer out capability query request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.TransferOutQueryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: QueryTransferOutAssets
+      tags:
+      - Wallet
+swagger: "2.0"

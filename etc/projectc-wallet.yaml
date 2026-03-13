@@ -1,0 +1,43 @@
+server:
+  host: "0.0.0.0"
+  port: 8083
+  version: "0.1.0"
+gin:
+  mode: debug
+log:
+  level: info
+auth:
+  username: "test"
+  password: "test"
+mysql:
+  dsn: "root:123456@tcp(mysql01.dev.lls.com:4120)/projectc-custodial-wallet?charset=utf8mb4&parseTime=True&loc=Local"
+  maxIdleConns: 200
+  maxOpenConns: 200
+rabbitmq:
+  url: "amqp://projectc:projectc@dev-mq.lls.com:5672/%2Fprojectc-dtt"
+  exchange: "tx_callback_fanout_exchange"
+  cancelExchange: "tx_callback_cancel_fanout_exchange"
+  exchangeType: "fanout"
+  queue: "projectc-wallet.queue"
+  routingKey: ""
+signature:
+  appId: "projectc-wallet"
+  appSecret: "replace-me"
+  maxSkewMillis: 300000
+kms:
+  baseUrl: "http://127.0.0.1:8081"
+  username: "test"
+  password: "test"
+connector:
+  baseUrl: "http://127.0.0.1:8082"
+  username: "test"
+  password: "test"
+  networkCode: "solana"
+  nativeTokenSymbol: "SOL"
+callback:
+  depositUrl: ""
+  transferOutUrl: ""
+  timeoutSeconds: 10
+solana:
+  rpcEndpoint: "https://devnet.helius-rpc.com/?api-key=7c8a6828-2b0b-456b-a1fc-f08073e8304a"
+  computeUnitPrice: 0
