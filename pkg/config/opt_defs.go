@@ -97,14 +97,19 @@ var flagsOpts = []flagOpt{
 		optUsage:        "rabbitmq routing key",
 	},
 	{
-		optName:         FLAG_KEY_SIGN_APP_ID,
+		optName:         FLAG_KEY_SIGN_API_KEY,
 		optDefaultValue: "",
-		optUsage:        "request signature app id",
+		optUsage:        "request signature api key",
 	},
 	{
-		optName:         FLAG_KEY_SIGN_SECRET,
+		optName:         FLAG_KEY_SIGN_PUBLIC,
 		optDefaultValue: "",
-		optUsage:        "request signature secret",
+		optUsage:        "request signature public key",
+	},
+	{
+		optName:         FLAG_KEY_SIGN_PRIVATE,
+		optDefaultValue: "",
+		optUsage:        "request signature private key",
 	},
 	{
 		optName:         FLAG_KEY_SIGN_SKEW,

@@ -25,8 +25,9 @@ rabbitmq:
   queue: "projectc-custodial-wallet.queue"
   routingKey: ""
 signature:
-  appId: "projectc-custodial-wallet"
-  appSecret: "replace-me"
+  apiKey: "replace-me"
+  publicKey: "replace-me"
+  privateKey: "replace-me"
   maxSkewMillis: 300000
 kms:
   baseUrl: "http://unblock-kms-svc"

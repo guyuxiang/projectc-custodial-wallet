@@ -3,9 +3,6 @@ package service
 import (
 	"bytes"
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -18,6 +15,7 @@ import (
 	"github.com/guyuxiang/projectc-custodial-wallet/pkg/config"
 	"github.com/guyuxiang/projectc-custodial-wallet/pkg/log"
 	"github.com/guyuxiang/projectc-custodial-wallet/pkg/models"
+	"github.com/guyuxiang/projectc-custodial-wallet/pkg/signature"
 	"github.com/guyuxiang/projectc-custodial-wallet/pkg/store"
 )
 
@@ -678,16 +676,25 @@ func (s *walletService) postSignedCallback(ctx context.Context, url string, payl
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	appID := ""
-	secret := ""
-	if s.cfg != nil && s.cfg.Signature != nil {
-		appID = s.cfg.Signature.AppID
-		secret = s.cfg.Signature.AppSecret
+	if s.cfg == nil || s.cfg.Signature == nil || s.cfg.Signature.APIKey == "" || s.cfg.Signature.PrivateKey == "" {
+		return fmt.Errorf("signature config is incomplete")
 	}
+	apiKey := s.cfg.Signature.APIKey
 	timestamp := strconv.FormatInt(time.Now().UnixMilli(), 10)
-	req.Header.Set("X-App-Id", appID)
+	signatureValue, err := signature.SignBase64(
+		s.cfg.Signature.PrivateKey,
+		req.Method,
+		req.URL.Path,
+		req.URL.RawQuery,
+		body,
+		timestamp,
+	)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("X-API-Key", apiKey)
 	req.Header.Set("X-Timestamp", timestamp)
-	req.Header.Set("X-Signature", signPayload(secret, appID, timestamp, body))
+	req.Header.Set("X-Signature", signatureValue)
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		log.Warningf("callback request failed url=%s err=%v", url, err)
@@ -710,12 +717,6 @@ func (s *walletService) postSignedCallback(ctx context.Context, url string, payl
 		return fmt.Errorf("callback business code=%v message=%s", callbackResp.Code, callbackResp.Message)
 	}
 	return nil
-}
-
-func signPayload(secret string, appID string, timestamp string, body []byte) string {
-	h := hmac.New(sha256.New, []byte(secret))
-	_, _ = h.Write([]byte(appID + timestamp + string(body)))
-	return hex.EncodeToString(h.Sum(nil))
 }
 
 func normalizeRespCode(code interface{}) string {

@@ -2,9 +2,6 @@ package middleware
 
 import (
 	"bytes"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
 	"io"
 	"net/http"
 	"strconv"
@@ -13,25 +10,26 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/guyuxiang/projectc-custodial-wallet/pkg/config"
 	"github.com/guyuxiang/projectc-custodial-wallet/pkg/models"
+	"github.com/guyuxiang/projectc-custodial-wallet/pkg/signature"
 )
 
 func RequestSignatureMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		cfg := config.GetConfig()
-		if cfg == nil || cfg.Signature == nil || cfg.Signature.AppID == "" || cfg.Signature.AppSecret == "" {
+		if cfg == nil || cfg.Signature == nil || cfg.Signature.APIKey == "" || cfg.Signature.PublicKey == "" {
 			c.Next()
 			return
 		}
 
-		appID := c.GetHeader("X-App-Id")
+		apiKey := c.GetHeader("X-API-Key")
 		timestamp := c.GetHeader("X-Timestamp")
-		signature := c.GetHeader("X-Signature")
-		if appID == "" || timestamp == "" || signature == "" {
+		signatureValue := c.GetHeader("X-Signature")
+		if apiKey == "" || timestamp == "" || signatureValue == "" {
 			c.AbortWithStatusJSON(http.StatusOK, models.Response{Code: models.CodeSignatureInvalid, Message: "missing signature headers", Data: struct{}{}})
 			return
 		}
-		if appID != cfg.Signature.AppID {
-			c.AbortWithStatusJSON(http.StatusOK, models.Response{Code: models.CodePermissionDenied, Message: "invalid app id", Data: struct{}{}})
+		if apiKey != cfg.Signature.APIKey {
+			c.AbortWithStatusJSON(http.StatusOK, models.Response{Code: models.CodePermissionDenied, Message: "invalid api key", Data: struct{}{}})
 			return
 		}
 
@@ -56,10 +54,15 @@ func RequestSignatureMiddleware() gin.HandlerFunc {
 		}
 		c.Request.Body = io.NopCloser(bytes.NewReader(body))
 
-		mac := hmac.New(sha256.New, []byte(cfg.Signature.AppSecret))
-		_, _ = mac.Write([]byte(appID + timestamp + string(body)))
-		expected := hex.EncodeToString(mac.Sum(nil))
-		if !hmac.Equal([]byte(expected), []byte(signature)) {
+		if err := signature.VerifyBase64(
+			cfg.Signature.PublicKey,
+			signatureValue,
+			c.Request.Method,
+			c.Request.URL.Path,
+			c.Request.URL.RawQuery,
+			body,
+			timestamp,
+		); err != nil {
 			c.AbortWithStatusJSON(http.StatusOK, models.Response{Code: models.CodeSignatureInvalid, Message: "invalid signature", Data: struct{}{}})
 			return
 		}

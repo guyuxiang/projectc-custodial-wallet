@@ -78,8 +78,9 @@ type RabbitMQ struct {
 }
 
 type Signature struct {
-	AppID         string `yaml:"appId"`
-	AppSecret     string `yaml:"appSecret"`
+	APIKey        string `yaml:"apiKey"`
+	PublicKey     string `yaml:"publicKey"`
+	PrivateKey    string `yaml:"privateKey"`
 	MaxSkewMillis int64  `yaml:"maxSkewMillis"`
 }
 

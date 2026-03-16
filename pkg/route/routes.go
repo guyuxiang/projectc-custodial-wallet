@@ -1,6 +1,7 @@
 package route
 
 import (
+	"github.com/guyuxiang/projectc-custodial-wallet/pkg/middleware"
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -40,7 +41,7 @@ func InstallRoutes(r *gin.Engine) {
 	})
 
 	rootGroup := r.Group("/api/v1")
-	// rootGroup.Use(middleware.RequestSignatureMiddleware())
+	rootGroup.Use(middleware.RequestSignatureMiddleware())
 
 	{
 		rootGroup.GET("/ping", controller.Ping)
