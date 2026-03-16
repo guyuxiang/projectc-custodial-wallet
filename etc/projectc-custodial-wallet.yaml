@@ -10,7 +10,11 @@ auth:
   username: "test"
   password: "test"
 mysql:
-  dsn: "root:123456@tcp(mysql01.dev.lls.com:4120)/projectc-custodial-wallet?charset=utf8mb4&parseTime=True&loc=Local"
+  username: "root"
+  password: "123456"
+  host: "mysql01.dev.lls.com"
+  port: 4120
+  database: "projectc-solana-connector"
   maxIdleConns: 200
   maxOpenConns: 200
 rabbitmq:

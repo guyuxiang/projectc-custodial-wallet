@@ -16,11 +16,12 @@ func Init(cfg *config.MySQL) (*gorm.DB, error) {
 	if cfg == nil {
 		return nil, errors.New("mysql config is nil")
 	}
-	if cfg.DSN == "" {
+	dsn := cfg.EffectiveDSN()
+	if dsn == "" {
 		return nil, errors.New("mysql dsn is empty")
 	}
 
-	conn, err := gorm.Open(mysql.Open(cfg.DSN), &gorm.Config{})
+	conn, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		return nil, err
 	}

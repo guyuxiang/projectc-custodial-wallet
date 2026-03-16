@@ -1,5 +1,7 @@
 package config
 
+import "fmt"
+
 type Config struct {
 	Server    *Server    `yaml:"server"`
 	Auth      *Auth      `yaml:"auth"`
@@ -34,9 +36,35 @@ type Log struct {
 }
 
 type MySQL struct {
+	Username     string `yaml:"username"`
+	Password     string `yaml:"password"`
+	Host         string `yaml:"host"`
+	Port         int    `yaml:"port"`
+	Database     string `yaml:"database"`
 	DSN          string `yaml:"dsn"`
 	MaxIdleConns int    `yaml:"maxIdleConns"`
 	MaxOpenConns int    `yaml:"maxOpenConns"`
+}
+
+func (m *MySQL) EffectiveDSN() string {
+	if m == nil {
+		return ""
+	}
+	if m.DSN != "" {
+		return m.DSN
+	}
+	if m.Username == "" || m.Host == "" || m.Port <= 0 || m.Database == "" {
+		return ""
+	}
+
+	return fmt.Sprintf(
+		"%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+		m.Username,
+		m.Password,
+		m.Host,
+		m.Port,
+		m.Database,
+	)
 }
 
 type RabbitMQ struct {
