@@ -3,7 +3,7 @@ package models
 import "time"
 
 const (
-	CodeSuccess            = "0"
+	CodeSuccess            = "200"
 	CodeParamError         = "1001"
 	CodeWalletNotFound     = "1002"
 	CodeNetworkUnsupported = "1003"
