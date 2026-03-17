@@ -81,7 +81,7 @@ type TransferOutRequest struct {
 	WalletNo    string `json:"walletNo" binding:"required"`
 	Network     string `json:"network" binding:"required"`
 	ToAddress   string `json:"toAddress" binding:"required"`
-	TokenSymbol string `json:"tokenSymbol"`
+	TokenSymbol string `json:"tokenSymbol" binding:"required"`
 	Amount      string `json:"amount" binding:"required"`
 }
 
