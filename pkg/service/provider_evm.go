@@ -302,6 +302,7 @@ func (p *evmProvider) TransferOut(ctx context.Context, wallet *models.WalletEnti
 		if err != nil {
 			return nil, err
 		}
+		log.Infoln(unsignedTx)
 		signResult, err = p.svc.signEVMTransaction(ctx, wallet, unsignedTx)
 		if err != nil {
 			return nil, err
