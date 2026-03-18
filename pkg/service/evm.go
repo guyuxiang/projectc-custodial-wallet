@@ -56,7 +56,7 @@ type evmUnsignedTx struct {
 	ChainID  string `json:"chainId"`
 	Nonce    string `json:"nonce"`
 	GasPrice string `json:"gasPrice"`
-	GasLimit string `json:"gasLimit"`
+	Gas      string `json:"gas"`
 	To       string `json:"to"`
 	Value    string `json:"value"`
 	Data     string `json:"data"`
@@ -223,7 +223,7 @@ func buildUnsignedEVMNativeTransferTx(fromAddress string, toAddress string, chai
 		ChainID:  formatHexUint64(chainID),
 		Nonce:    formatHexUint64(nonce),
 		GasPrice: formatHexBig(gasPrice),
-		GasLimit: formatHexUint64(gasLimit),
+		Gas:      formatHexUint64(gasLimit),
 		To:       strings.TrimSpace(toAddress),
 		Value:    formatHexBig(valueWei),
 		Data:     "0x",
@@ -248,7 +248,7 @@ func buildUnsignedERC20TransferTx(contractAddress string, toAddress string, chai
 		ChainID:  formatHexUint64(chainID),
 		Nonce:    formatHexUint64(nonce),
 		GasPrice: formatHexBig(gasPrice),
-		GasLimit: formatHexUint64(gasLimit),
+		Gas:      formatHexUint64(gasLimit),
 		To:       strings.TrimSpace(contractAddress),
 		Value:    "0x0",
 		Data:     data,
