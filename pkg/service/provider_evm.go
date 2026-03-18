@@ -275,7 +275,11 @@ func (p *evmProvider) TransferOut(ctx context.Context, wallet *models.WalletEnti
 			return nil, newAppError(models.CodeInsufficient, "insufficient balance")
 		}
 
-		unsignedTx, err := buildUnsignedEVMNativeTransferTx(wallet.Address, req.ToAddress, chainID, nonce, gasPrice, p.nativeGasLimit(), requestAmount)
+		gasLimit, err := p.estimateNativeTransferGas(ctx, rpcClient, wallet.Address, req.ToAddress, gasPrice, requestAmount)
+		if err != nil {
+			return nil, err
+		}
+		unsignedTx, err := buildUnsignedEVMNativeTransferTx(wallet.Address, req.ToAddress, chainID, nonce, gasPrice, gasLimit, requestAmount)
 		if err != nil {
 			return nil, err
 		}
@@ -306,7 +310,11 @@ func (p *evmProvider) TransferOut(ctx context.Context, wallet *models.WalletEnti
 			return nil, newAppError(models.CodeInsufficient, "insufficient balance")
 		}
 
-		unsignedTx, err := buildUnsignedERC20TransferTx(tokenMeta.Address(), req.ToAddress, chainID, nonce, gasPrice, p.tokenGasLimit(), requestAmount, tokenMeta.Decimals)
+		gasLimit, err := p.estimateERC20TransferGas(ctx, rpcClient, wallet.Address, tokenMeta.Address(), req.ToAddress, gasPrice, requestAmount, tokenMeta.Decimals)
+		if err != nil {
+			return nil, err
+		}
+		unsignedTx, err := buildUnsignedERC20TransferTx(tokenMeta.Address(), req.ToAddress, chainID, nonce, gasPrice, gasLimit, requestAmount, tokenMeta.Decimals)
 		if err != nil {
 			return nil, err
 		}
@@ -897,25 +905,49 @@ func (p *evmProvider) prepareTransferBuild(ctx context.Context, fromAddress stri
 	return rpcClient, chainID, gasPrice, nonce, nil
 }
 
-func (p *evmProvider) nativeGasLimit() uint64 {
-	connector := p.svc.connectorConfig(p.network)
-	if connector != nil && connector.GasLimit > 0 {
-		return connector.GasLimit
-	}
-	return 21000
-}
-
-func (p *evmProvider) tokenGasLimit() uint64 {
-	connector := p.svc.connectorConfig(p.network)
-	if connector != nil && connector.TokenGasLimit > 0 {
-		return connector.TokenGasLimit
-	}
-	return 65000
-}
-
 func (p *evmProvider) eip7702Enabled() bool {
 	connector := p.svc.connectorConfig(p.network)
 	return connector != nil && connector.EnableEIP7702
+}
+
+func (p *evmProvider) estimateNativeTransferGas(ctx context.Context, rpcClient *evmRPCClient, fromAddress string, toAddress string, gasPrice *big.Int, amount string) (uint64, error) {
+	valueWei, err := decimalToBaseUnits(amount, 18)
+	if err != nil {
+		return 0, newAppError(models.CodeParamError, err.Error())
+	}
+	gasLimit, err := rpcClient.estimateGas(ctx, evmCallMsg{
+		From:     strings.TrimSpace(fromAddress),
+		To:       strings.TrimSpace(toAddress),
+		GasPrice: formatHexBig(gasPrice),
+		Value:    formatHexBig(valueWei),
+		Data:     "0x",
+	})
+	if err != nil {
+		return 0, wrapSystemError(err)
+	}
+	return gasLimit, nil
+}
+
+func (p *evmProvider) estimateERC20TransferGas(ctx context.Context, rpcClient *evmRPCClient, fromAddress string, contractAddress string, toAddress string, gasPrice *big.Int, amount string, decimals uint8) (uint64, error) {
+	amountUnits, err := decimalToBaseUnits(amount, decimals)
+	if err != nil {
+		return 0, newAppError(models.CodeParamError, err.Error())
+	}
+	data, err := buildERC20TransferData(toAddress, amountUnits)
+	if err != nil {
+		return 0, newAppError(models.CodeParamError, err.Error())
+	}
+	gasLimit, err := rpcClient.estimateGas(ctx, evmCallMsg{
+		From:     strings.TrimSpace(fromAddress),
+		To:       strings.TrimSpace(contractAddress),
+		GasPrice: formatHexBig(gasPrice),
+		Value:    "0x0",
+		Data:     data,
+	})
+	if err != nil {
+		return 0, wrapSystemError(err)
+	}
+	return gasLimit, nil
 }
 
 func (p *evmProvider) lookupEIP7702Delegator(ctx context.Context, rpcClient *evmRPCClient, address string) (string, bool, error) {
@@ -946,9 +978,9 @@ func (p *evmProvider) userOperationEstimateStateOverride(sender string, delegato
 }
 
 func (p *evmProvider) userOperationCallGasLimit(native bool) uint64 {
-	base := p.tokenGasLimit()
+	base := uint64(65000)
 	if native {
-		base = p.nativeGasLimit()
+		base = 21000
 	}
 	if native {
 		if base < 25000 {

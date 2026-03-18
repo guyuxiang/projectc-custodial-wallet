@@ -62,6 +62,14 @@ type evmUnsignedTx struct {
 	Data     string `json:"data"`
 }
 
+type evmCallMsg struct {
+	From     string `json:"from,omitempty"`
+	To       string `json:"to,omitempty"`
+	GasPrice string `json:"gasPrice,omitempty"`
+	Value    string `json:"value,omitempty"`
+	Data     string `json:"data,omitempty"`
+}
+
 func newEVMRPCClient(httpClient *http.Client, endpoint string) *evmRPCClient {
 	return &evmRPCClient{httpClient: httpClient, endpoint: strings.TrimSpace(endpoint)}
 }
@@ -176,6 +184,14 @@ func (c *evmRPCClient) estimateUserOperationGas(ctx context.Context, userOp evmU
 		return nil, err
 	}
 	return &result, nil
+}
+
+func (c *evmRPCClient) estimateGas(ctx context.Context, msg evmCallMsg) (uint64, error) {
+	var result string
+	if err := c.call(ctx, "eth_estimateGas", []interface{}{msg}, &result); err != nil {
+		return 0, err
+	}
+	return parseHexUint64(result)
 }
 
 func parseHexUint64(value string) (uint64, error) {

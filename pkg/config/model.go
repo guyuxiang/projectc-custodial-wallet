@@ -81,9 +81,6 @@ type Connector struct {
 	NativeTokenSymbol  string `yaml:"nativeTokenSymbol"`
 	RPCEndpoint        string `yaml:"rpcEndpoint"`
 	ChainID            uint64 `yaml:"chainId"`
-	GasLimit           uint64 `yaml:"gasLimit"`
-	TokenGasLimit      uint64 `yaml:"tokenGasLimit"`
-	Bundler            string `yaml:"bundler"`
 	BundlerRPCEndpoint string `yaml:"bundlerRpcEndpoint"`
 	EntryPoint         string `yaml:"entryPoint"`
 	EnableEIP7702      bool   `yaml:"enableEip7702"`
