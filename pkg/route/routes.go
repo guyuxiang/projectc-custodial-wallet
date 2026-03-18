@@ -46,6 +46,9 @@ func InstallRoutes(r *gin.Engine) {
 	adminGroup := r.Group("/api/v1/admin")
 	adminGroup.Use(middleware.BasicAuthMiddleware())
 
+	innerGroup := r.Group("/api/v1/inner")
+	innerGroup.Use(middleware.BasicAuthMiddleware())
+
 	{
 		signatureKeyController := controller.NewSignatureKeyController()
 		adminGroup.POST("/signature/key/upsert", signatureKeyController.Upsert)
@@ -58,8 +61,8 @@ func InstallRoutes(r *gin.Engine) {
 		rootGroup.POST("/wallet/transfer/out", walletController.TransferOut)
 		rootGroup.POST("/wallet/transaction/query", walletController.QueryTransaction)
 		rootGroup.POST("/wallet/transaction/history/query", walletController.QueryHistory)
-		rootGroup.POST("/inner/wallet/create", walletController.CreateWallet)
-		rootGroup.POST("/inner/wallet/callback/tx", walletController.ReceiveTxCallback)
-		rootGroup.POST("/inner/wallet/callback/rollback", walletController.ReceiveRollbackCallback)
+		innerGroup.POST("/wallet/create", walletController.CreateWallet)
+		innerGroup.POST("/wallet/callback/tx", walletController.ReceiveTxCallback)
+		innerGroup.POST("/wallet/callback/rollback", walletController.ReceiveRollbackCallback)
 	}
 }
