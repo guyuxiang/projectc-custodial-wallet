@@ -30,7 +30,7 @@ connectors:
     networkCode: "solana"
     nativeTokenSymbol: "SOL"
   ethereum:
-    baseUrl: "http://unblock-evm-connector"
+    baseUrl: "http://unblock-eth-connector"
     username: "test"
     password: "test"
     driver: "evm"
