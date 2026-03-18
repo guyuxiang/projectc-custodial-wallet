@@ -230,6 +230,38 @@ func (s *walletService) QueryWalletInfo(ctx context.Context, req models.WalletIn
 }
 
 func (s *walletService) QueryTransferOutAssets(ctx context.Context, req models.TransferOutQueryRequest) (*models.TransferOutQueryResponse, error) {
+	if normalizedNetwork(req.Network) == "" {
+		wallets, err := s.getWallets(ctx, req.WalletNo)
+		if err != nil {
+			return nil, err
+		}
+		assets := make([]models.TransferableAsset, 0, len(wallets)*4)
+		for _, wallet := range wallets {
+			provider, err := s.provider(wallet.Network)
+			if err != nil {
+				return nil, err
+			}
+			resp, err := provider.QueryTransferOutAssets(ctx, &wallet, models.TransferOutQueryRequest{
+				WalletNo: req.WalletNo,
+				Network:  wallet.Network,
+			})
+			if err != nil {
+				return nil, err
+			}
+			assets = append(assets, resp.AssetList...)
+		}
+		sort.Slice(assets, func(i, j int) bool {
+			if assets[i].Network == assets[j].Network {
+				return assets[i].TokenSymbol < assets[j].TokenSymbol
+			}
+			return assets[i].Network < assets[j].Network
+		})
+		return &models.TransferOutQueryResponse{
+			WalletNo:  req.WalletNo,
+			AssetList: assets,
+		}, nil
+	}
+
 	wallet, err := s.getWallet(ctx, req.WalletNo, req.Network)
 	if err != nil {
 		return nil, err

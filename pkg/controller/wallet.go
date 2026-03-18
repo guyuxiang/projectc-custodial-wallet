@@ -85,7 +85,7 @@ func (wc *walletController) QueryWalletInfo(c *gin.Context) {
 
 // QueryTransferOutAssets godoc
 // @Summary QueryTransferOutAssets
-// @Description Query transferable assets of a wallet under a specific network, including native token and configured network tokens.
+// @Description Query transferable assets of a wallet. When network is specified, return assets under that network; when network is empty, return assets across all active networks under the master walletNo.
 // @Tags Wallet
 // @Accept json
 // @Produce json
