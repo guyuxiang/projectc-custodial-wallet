@@ -705,6 +705,7 @@ const docTemplate = `{
                 "network",
                 "requestNo",
                 "toAddress",
+                "tokenSymbol",
                 "walletNo"
             ],
             "properties": {

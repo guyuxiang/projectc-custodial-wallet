@@ -119,6 +119,7 @@ definitions:
     - network
     - requestNo
     - toAddress
+    - tokenSymbol
     - walletNo
     type: object
   models.WalletCreateRequest:
