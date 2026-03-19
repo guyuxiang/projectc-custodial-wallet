@@ -22,7 +22,7 @@ func InitApp(cfg *config.Config, db *gorm.DB) error {
 		return err
 	}
 
-	timeout := 10 * time.Second
+	timeout := 30 * time.Second
 	if cfg != nil && cfg.Callback != nil && cfg.Callback.TimeoutSeconds > 0 {
 		timeout = time.Duration(cfg.Callback.TimeoutSeconds) * time.Second
 	}

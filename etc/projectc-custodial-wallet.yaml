@@ -46,6 +46,6 @@ connectors:
 callback:
   depositUrl: ""
   transferOutUrl: ""
-  timeoutSeconds: 10
+  timeoutSeconds: 30
 requestSignature:
   enabled: true
