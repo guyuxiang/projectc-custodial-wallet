@@ -155,6 +155,24 @@ func (c *evmRPCClient) callContract(ctx context.Context, to string, data string)
 	return strings.TrimSpace(result), nil
 }
 
+func (c *evmRPCClient) callContractWithStateOverride(ctx context.Context, to string, data string, stateOverride evmStateOverride) (string, error) {
+	var result string
+	params := []interface{}{
+		map[string]string{
+			"to":   strings.TrimSpace(to),
+			"data": strings.TrimSpace(data),
+		},
+		"latest",
+	}
+	if len(stateOverride) > 0 {
+		params = append(params, stateOverride)
+	}
+	if err := c.call(ctx, "eth_call", params, &result); err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(result), nil
+}
+
 func (c *evmRPCClient) getUserOperationNonce(ctx context.Context, entryPoint string, sender string) (uint64, error) {
 	callData, err := buildGetNonceCallData(sender, 0)
 	if err != nil {
@@ -165,6 +183,22 @@ func (c *evmRPCClient) getUserOperationNonce(ctx context.Context, entryPoint str
 		return 0, err
 	}
 	return parseHexUint64(result)
+}
+
+func (c *evmRPCClient) getUserOperationHash(ctx context.Context, entryPoint string, userOp evmUserOperation, stateOverride evmStateOverride) (string, error) {
+	callData, err := buildGetUserOpHashCallData(userOp)
+	if err != nil {
+		return "", err
+	}
+	result, err := c.callContractWithStateOverride(ctx, entryPoint, callData, stateOverride)
+	if err != nil {
+		return "", err
+	}
+	raw := normalizeHexBytes(result)
+	if len(raw) != 64 {
+		return "", fmt.Errorf("invalid getUserOpHash result")
+	}
+	return "0x" + raw, nil
 }
 
 func (c *evmRPCClient) getCode(ctx context.Context, address string) (string, error) {
@@ -375,6 +409,53 @@ func buildUserOperationHash(chainID uint64, entryPoint string, userOp evmUserOpe
 	return "0x" + finalHash, nil
 }
 
+func buildGetUserOpHashCallData(userOp evmUserOperation) (string, error) {
+	senderWord, err := abiAddressWord(userOp.Sender)
+	if err != nil {
+		return "", err
+	}
+	nonce, err := parseHexBig(userOp.Nonce)
+	if err != nil {
+		return "", err
+	}
+	preVerificationGas, err := parseHexBig(userOp.PreVerificationGas)
+	if err != nil {
+		return "", err
+	}
+
+	initCodeEncoded := abiEncodeBytes(buildPackedInitCode(userOp.Factory, userOp.FactoryData))
+	callDataEncoded := abiEncodeBytes(userOp.CallData)
+	paymasterAndDataEncoded := abiEncodeBytes(buildPaymasterAndData(userOp))
+	signatureEncoded := abiEncodeBytes(userOp.Signature)
+
+	head := make([]string, 0, 9)
+	tail := make([]string, 0, 4)
+	offset := 32 * 9
+
+	head = append(head, senderWord)
+	head = append(head, abiUint256Word(nonce))
+	head = append(head, abiUint256Word(big.NewInt(int64(offset))))
+	tail = append(tail, initCodeEncoded)
+	offset += len(initCodeEncoded) / 2
+
+	head = append(head, abiUint256Word(big.NewInt(int64(offset))))
+	tail = append(tail, callDataEncoded)
+	offset += len(callDataEncoded) / 2
+
+	head = append(head, strings.TrimPrefix(packTwoUint128Hex(userOp.VerificationGasLimit, userOp.CallGasLimit), "0x"))
+	head = append(head, abiUint256Word(preVerificationGas))
+	head = append(head, strings.TrimPrefix(packTwoUint128Hex(userOp.MaxPriorityFeePerGas, userOp.MaxFeePerGas), "0x"))
+
+	head = append(head, abiUint256Word(big.NewInt(int64(offset))))
+	tail = append(tail, paymasterAndDataEncoded)
+	offset += len(paymasterAndDataEncoded) / 2
+
+	head = append(head, abiUint256Word(big.NewInt(int64(offset))))
+	tail = append(tail, signatureEncoded)
+
+	return "0x" + methodSelector("getUserOpHash((address,uint256,bytes,bytes,bytes32,uint256,bytes32,bytes,bytes))") + strings.Join(head, "") + strings.Join(tail, ""), nil
+}
+
 func buildInitCode(factory string, factoryData string) string {
 	factory = strings.TrimSpace(factory)
 	factoryData = strings.TrimSpace(factoryData)
@@ -467,6 +548,13 @@ func abiUint256Word(v *big.Int) string {
 
 func packTwoUint128Hex(high string, low string) string {
 	return "0x" + leftPadHex(strings.TrimPrefix(strings.TrimSpace(high), "0x"), 32) + leftPadHex(strings.TrimPrefix(strings.TrimSpace(low), "0x"), 32)
+}
+
+func abiEncodeBytes(v string) string {
+	raw := normalizeHexBytes(v)
+	lengthWord := abiUint256Word(big.NewInt(int64(len(raw) / 2)))
+	paddedRaw := rightPadHex(raw, ((len(raw)+63)/64)*64)
+	return lengthWord + paddedRaw
 }
 
 func normalizeHexBytes(v string) string {
