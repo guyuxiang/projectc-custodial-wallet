@@ -361,13 +361,10 @@ func buildEIP7702ExecuteCallData(target string, value *big.Int, data string) (st
 	payload := normalizeHexBytes(data)
 	payloadLenWord := abiUint256Word(big.NewInt(int64(len(payload) / 2)))
 	paddedPayload := rightPadHex(payload, ((len(payload)+63)/64)*64)
-	executionCalldata := targetWord + valueWord + payloadLenWord + paddedPayload
 
-	selector := methodSelector("execute(bytes32,bytes)")
-	modeWord := strings.TrimPrefix(eip7702SingleDefaultMode, "0x")
-	offsetWord := leftPadHex("40", 64)
-	execDataLenWord := abiUint256Word(big.NewInt(int64(len(executionCalldata) / 2)))
-	return "0x" + selector + modeWord + offsetWord + execDataLenWord + executionCalldata, nil
+	selector := methodSelector("execute(address,uint256,bytes)")
+	offsetWord := leftPadHex("60", 64)
+	return "0x" + selector + targetWord + valueWord + offsetWord + payloadLenWord + paddedPayload, nil
 }
 
 func buildGetNonceCallData(sender string, key uint64) (string, error) {
