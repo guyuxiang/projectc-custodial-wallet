@@ -696,6 +696,12 @@ func (p *evmProvider) handleIncomingNative(ctx context.Context, req models.Conne
 	if !strings.EqualFold(req.Tx.Status, "SUCCESS") || !validateEVMAddress(req.Tx.To) {
 		return nil
 	}
+	if req.Tx.Amount == "" || req.Tx.Amount == "0" {
+		return nil
+	}
+	if p.hasTokenTransferEvent(req.TxEvents) {
+		return nil
+	}
 	wallet, err := p.svc.store.GetWalletByAddress(ctx, p.network, req.Tx.To)
 	if err != nil {
 		if store.IsNotFound(err) {
@@ -703,10 +709,6 @@ func (p *evmProvider) handleIncomingNative(ctx context.Context, req models.Conne
 			return nil
 		}
 		return err
-	}
-	if req.Tx.Amount == "" || req.Tx.Amount == "0" {
-		log.Infof("ignore evm native incoming txHash=%s to=%s: zero amount", req.Tx.Code, req.Tx.To)
-		return nil
 	}
 	return p.upsertIncomingTransaction(ctx, wallet, req.Tx.Code, models.TokenNative, p.svc.nativeTokenSymbol(p.network), req.Tx.Amount, req.Tx.From, req.Tx.To, req.Tx.Fee, req.Tx.Timestamp, models.StatusSuccess)
 }
@@ -822,6 +824,15 @@ func (p *evmProvider) isTokenTransferEvent(eventType string) bool {
 	default:
 		return false
 	}
+}
+
+func (p *evmProvider) hasTokenTransferEvent(events []models.ConnectorChainEvent) bool {
+	for _, event := range events {
+		if p.isTokenTransferEvent(event.Type) {
+			return true
+		}
+	}
+	return false
 }
 
 func (p *evmProvider) isEVMAddressType(chainType string) bool {
