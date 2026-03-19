@@ -486,12 +486,7 @@ func (p *evmProvider) transferOutWithEIP7702(ctx context.Context, wallet *models
 	}
 
 	var authMap map[string]interface{}
-	if alreadyDelegated {
-		authMap = map[string]interface{}{
-			"chainId": formatHexUint64(chainID),
-			"address": delegator,
-		}
-	} else {
+	if !alreadyDelegated {
 		authSignRes, err := p.svc.signEIP7702Authorization(ctx, wallet, chainID, delegator, txNonce)
 		if err != nil {
 			return nil, err
@@ -506,10 +501,13 @@ func (p *evmProvider) transferOutWithEIP7702(ctx context.Context, wallet *models
 			"nonce":     formatHexUint64(txNonce),
 			"r":         r,
 			"s":         s,
-			"yParity":   yParity,
+			"yParity":   formatHexUint64(yParity),
 			"hash":      authSignRes.Hash,
 			"signature": authSignRes.Signature,
 		}
+	}
+	if len(authMap) > 0 {
+		userOp.EIP7702Auth = authMap
 	}
 	typedData, err := buildUserOperationTypedData(chainID, entryPoint, userOp)
 	if err != nil {
@@ -525,14 +523,16 @@ func (p *evmProvider) transferOutWithEIP7702(ctx context.Context, wallet *models
 	if err != nil {
 		return nil, wrapSystemError(err)
 	}
+	userOpParamsRaw, err := json.Marshal([]interface{}{userOpMap, entryPoint})
+	if err != nil {
+		return nil, wrapSystemError(err)
+	}
 
 	var sendResp struct {
 		TxCode string `json:"txCode"`
 	}
-	if err := p.svc.connectorPost(ctx, p.network, "/api/v1/inner/chain-invoke/evm/common/tx-send", map[string]interface{}{
-		"entryPoint":    entryPoint,
-		"userOperation": userOpMap,
-		"eip7702Auth":   authMap,
+	if err := p.svc.connectorPost(ctx, p.network, "/api/v1/inner/chain-invoke/evm/common/tx-send", map[string]string{
+		"txSignResult": string(userOpParamsRaw),
 	}, &sendResp); err != nil {
 		return nil, wrapSystemError(err)
 	}

@@ -20,21 +20,22 @@ const entryPointV08Default = "0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108"
 const eip7702SingleDefaultMode = "0x0000000000000000000000000000000000000000000000000000000000000000"
 
 type evmUserOperation struct {
-	Sender                        string `json:"sender"`
-	Nonce                         string `json:"nonce"`
-	Factory                       string `json:"factory,omitempty"`
-	FactoryData                   string `json:"factoryData,omitempty"`
-	CallData                      string `json:"callData"`
-	CallGasLimit                  string `json:"callGasLimit"`
-	VerificationGasLimit          string `json:"verificationGasLimit"`
-	PreVerificationGas            string `json:"preVerificationGas"`
-	MaxPriorityFeePerGas          string `json:"maxPriorityFeePerGas"`
-	MaxFeePerGas                  string `json:"maxFeePerGas"`
-	Paymaster                     string `json:"paymaster,omitempty"`
-	PaymasterVerificationGasLimit string `json:"paymasterVerificationGasLimit,omitempty"`
-	PaymasterPostOpGasLimit       string `json:"paymasterPostOpGasLimit,omitempty"`
-	PaymasterData                 string `json:"paymasterData,omitempty"`
-	Signature                     string `json:"signature"`
+	Sender                        string                 `json:"sender"`
+	Nonce                         string                 `json:"nonce"`
+	Factory                       string                 `json:"factory,omitempty"`
+	FactoryData                   string                 `json:"factoryData,omitempty"`
+	CallData                      string                 `json:"callData"`
+	CallGasLimit                  string                 `json:"callGasLimit"`
+	VerificationGasLimit          string                 `json:"verificationGasLimit"`
+	PreVerificationGas            string                 `json:"preVerificationGas"`
+	MaxPriorityFeePerGas          string                 `json:"maxPriorityFeePerGas"`
+	MaxFeePerGas                  string                 `json:"maxFeePerGas"`
+	Paymaster                     string                 `json:"paymaster,omitempty"`
+	PaymasterVerificationGasLimit string                 `json:"paymasterVerificationGasLimit,omitempty"`
+	PaymasterPostOpGasLimit       string                 `json:"paymasterPostOpGasLimit,omitempty"`
+	PaymasterData                 string                 `json:"paymasterData,omitempty"`
+	EIP7702Auth                   map[string]interface{} `json:"eip7702Auth,omitempty"`
+	Signature                     string                 `json:"signature"`
 }
 
 type evmUserOperationGasEstimate struct {
