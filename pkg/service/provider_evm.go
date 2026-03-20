@@ -489,6 +489,15 @@ func (p *evmProvider) transferOutWithEIP7702(ctx context.Context, wallet *models
 	if err != nil {
 		return nil, err
 	}
+	if paymasterClient, err := p.newPaymasterRPCClient(); err != nil {
+		return nil, err
+	} else if paymasterClient != nil {
+		paymasterStub, err := paymasterClient.getPaymasterStubData(ctx, userOp, entryPoint)
+		if err != nil {
+			return nil, wrapSystemError(err)
+		}
+		applyPaymasterResultToUserOp(&userOp, paymasterStub)
+	}
 	gasEstimate, err := bundlerClient.estimateUserOperationGas(ctx, userOp, entryPoint, stateOverride)
 	if err != nil {
 		return nil, wrapSystemError(err)
@@ -506,6 +515,15 @@ func (p *evmProvider) transferOutWithEIP7702(ctx context.Context, wallet *models
 	}
 	if strings.TrimSpace(gasEstimate.PaymasterPostOpGasLimit) != "" {
 		userOp.PaymasterPostOpGasLimit = gasEstimate.PaymasterPostOpGasLimit
+	}
+	if paymasterClient, err := p.newPaymasterRPCClient(); err != nil {
+		return nil, err
+	} else if paymasterClient != nil {
+		paymasterData, err := paymasterClient.getPaymasterData(ctx, userOp, entryPoint)
+		if err != nil {
+			return nil, wrapSystemError(err)
+		}
+		applyPaymasterResultToUserOp(&userOp, paymasterData)
 	}
 	userOpHash, err := rpcClient.getUserOperationHash(ctx, entryPoint, userOp, stateOverride)
 	if err != nil {
@@ -983,6 +1001,35 @@ func (p *evmProvider) newBundlerRPCClient() (*evmRPCClient, error) {
 		return nil, newAppError(models.CodeSystemBusy, "bundler rpc endpoint is not configured")
 	}
 	return newEVMRPCClient(p.svc.httpClient, connector.BundlerRPCEndpoint), nil
+}
+
+func (p *evmProvider) newPaymasterRPCClient() (*evmRPCClient, error) {
+	connector := p.svc.connectorConfig(p.network)
+	if connector == nil {
+		return nil, newAppError(models.CodeSystemBusy, "evm connector is not configured")
+	}
+	if strings.TrimSpace(connector.PaymasterRPCEndpoint) == "" {
+		return nil, nil
+	}
+	return newEVMRPCClient(p.svc.httpClient, connector.PaymasterRPCEndpoint), nil
+}
+
+func applyPaymasterResultToUserOp(userOp *evmUserOperation, paymaster *evmPaymasterSponsorResult) {
+	if userOp == nil || paymaster == nil {
+		return
+	}
+	if strings.TrimSpace(paymaster.Paymaster) != "" {
+		userOp.Paymaster = paymaster.Paymaster
+	}
+	if strings.TrimSpace(paymaster.PaymasterVerificationGasLimit) != "" {
+		userOp.PaymasterVerificationGasLimit = paymaster.PaymasterVerificationGasLimit
+	}
+	if strings.TrimSpace(paymaster.PaymasterPostOpGasLimit) != "" {
+		userOp.PaymasterPostOpGasLimit = paymaster.PaymasterPostOpGasLimit
+	}
+	if strings.TrimSpace(paymaster.PaymasterData) != "" {
+		userOp.PaymasterData = paymaster.PaymasterData
+	}
 }
 
 func structToMap(v interface{}) (map[string]interface{}, error) {

@@ -48,6 +48,13 @@ type evmUserOperationGasEstimate struct {
 	PaymasterPostOpGasLimit       string `json:"paymasterPostOpGasLimit"`
 }
 
+type evmPaymasterSponsorResult struct {
+	Paymaster                     string `json:"paymaster"`
+	PaymasterVerificationGasLimit string `json:"paymasterVerificationGasLimit"`
+	PaymasterPostOpGasLimit       string `json:"paymasterPostOpGasLimit"`
+	PaymasterData                 string `json:"paymasterData"`
+}
+
 type evmStateOverride map[string]map[string]string
 
 type evmRPCClient struct {
@@ -228,6 +235,22 @@ func (c *evmRPCClient) estimateUserOperationGas(ctx context.Context, userOp evmU
 		params = append(params, stateOverride)
 	}
 	if err := c.call(ctx, "eth_estimateUserOperationGas", params, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+func (c *evmRPCClient) getPaymasterStubData(ctx context.Context, userOp evmUserOperation, entryPoint string) (*evmPaymasterSponsorResult, error) {
+	var result evmPaymasterSponsorResult
+	if err := c.call(ctx, "pm_getPaymasterStubData", []interface{}{userOp, strings.TrimSpace(entryPoint)}, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+func (c *evmRPCClient) getPaymasterData(ctx context.Context, userOp evmUserOperation, entryPoint string) (*evmPaymasterSponsorResult, error) {
+	var result evmPaymasterSponsorResult
+	if err := c.call(ctx, "pm_getPaymasterData", []interface{}{userOp, strings.TrimSpace(entryPoint)}, &result); err != nil {
 		return nil, err
 	}
 	return &result, nil

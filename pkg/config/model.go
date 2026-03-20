@@ -73,18 +73,19 @@ type KMS struct {
 }
 
 type Connector struct {
-	BaseURL            string `yaml:"baseUrl"`
-	Username           string `yaml:"username"`
-	Password           string `yaml:"password"`
-	Driver             string `yaml:"driver"`
-	NetworkCode        string `yaml:"networkCode"`
-	NativeTokenSymbol  string `yaml:"nativeTokenSymbol"`
-	RPCEndpoint        string `yaml:"rpcEndpoint"`
-	ChainID            uint64 `yaml:"chainId"`
-	BundlerRPCEndpoint string `yaml:"bundlerRpcEndpoint"`
-	EntryPoint         string `yaml:"entryPoint"`
-	EnableEIP7702      bool   `yaml:"enableEip7702"`
-	EIP7702Delegator   string `yaml:"eip7702Delegator"`
+	BaseURL              string `yaml:"baseUrl"`
+	Username             string `yaml:"username"`
+	Password             string `yaml:"password"`
+	Driver               string `yaml:"driver"`
+	NetworkCode          string `yaml:"networkCode"`
+	NativeTokenSymbol    string `yaml:"nativeTokenSymbol"`
+	RPCEndpoint          string `yaml:"rpcEndpoint"`
+	ChainID              uint64 `yaml:"chainId"`
+	BundlerRPCEndpoint   string `yaml:"bundlerRpcEndpoint"`
+	PaymasterRPCEndpoint string `yaml:"paymasterRpcEndpoint"`
+	EntryPoint           string `yaml:"entryPoint"`
+	EnableEIP7702        bool   `yaml:"enableEip7702"`
+	EIP7702Delegator     string `yaml:"eip7702Delegator"`
 }
 
 type Callback struct {
