@@ -12,6 +12,7 @@ import (
 type App struct {
 	Wallet       WalletService
 	SignatureKey SignatureKeyService
+	CallbackMQ   *callbackConsumer
 }
 
 var app *App
@@ -37,7 +38,15 @@ func InitApp(cfg *config.Config, db *gorm.DB) error {
 		return err
 	}
 
-	app = &App{Wallet: svc, SignatureKey: signatureSvc}
+	var consumer *callbackConsumer
+	if shouldUseRabbitMQ(cfg.RabbitMQ) {
+		consumer = newCallbackConsumer(cfg.RabbitMQ, svc)
+		if err := consumer.Start(); err != nil {
+			return err
+		}
+	}
+
+	app = &App{Wallet: svc, SignatureKey: signatureSvc, CallbackMQ: consumer}
 	return nil
 }
 

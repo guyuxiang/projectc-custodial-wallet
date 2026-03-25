@@ -48,5 +48,15 @@ callback:
   depositUrl: ""
   transferOutUrl: ""
   timeoutSeconds: 30
+rabbitmq:
+  enabled: true
+  url: "amqp://guest:guest@rabbitmq:5672/"
+  txExchange: "tx_callback_fanout_exchange"
+  rollbackExchange: "tx_callback_cancel_fanout_exchange"
+  txQueue: "projectc.wallet.callback.tx"
+  rollbackQueue: "projectc.wallet.callback.rollback"
+  retryDelayMs: 30000
+  maxRetry: 5
+  prefetchCount: 10
 requestSignature:
   enabled: true

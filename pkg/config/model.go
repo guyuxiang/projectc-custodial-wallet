@@ -12,6 +12,7 @@ type Config struct {
 	Connector        *Connector            `yaml:"connector"`
 	Connectors       map[string]*Connector `yaml:"connectors"`
 	Callback         *Callback             `yaml:"callback"`
+	RabbitMQ         *RabbitMQ             `yaml:"rabbitmq"`
 	RequestSignature *RequestSignature     `yaml:"requestSignature"`
 }
 
@@ -92,6 +93,18 @@ type Callback struct {
 	DepositURL     string `yaml:"depositUrl"`
 	TransferOutURL string `yaml:"transferOutUrl"`
 	TimeoutSeconds int    `yaml:"timeoutSeconds"`
+}
+
+type RabbitMQ struct {
+	Enabled          bool   `yaml:"enabled"`
+	URL              string `yaml:"url"`
+	TxExchange       string `yaml:"txExchange"`
+	RollbackExchange string `yaml:"rollbackExchange"`
+	TxQueue          string `yaml:"txQueue"`
+	RollbackQueue    string `yaml:"rollbackQueue"`
+	RetryDelayMs     int    `yaml:"retryDelayMs"`
+	MaxRetry         int    `yaml:"maxRetry"`
+	PrefetchCount    int    `yaml:"prefetchCount"`
 }
 
 type RequestSignature struct {
